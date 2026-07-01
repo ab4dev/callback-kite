@@ -4,45 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Kite Connect Login Callback</title>
-<style>
-  :root { color-scheme: light; }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: #f8fafc; color: #0f172a; padding: 20px;
-  }
-  .card {
-    max-width: 480px; width: 100%; background: #fff; border: 1px solid #e2e8f0;
-    border-radius: 16px; padding: 28px; box-shadow: 0 4px 6px -1px rgb(15 23 42 / 0.06);
-  }
-  h1 { font-size: 18px; margin: 0 0 6px; }
-  p.sub { color: #64748b; font-size: 13px; margin: 0 0 20px; }
-  .token-box {
-    background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px;
-    padding: 14px 16px; font-family: ui-monospace, "SF Mono", Consolas, monospace;
-    font-size: 14px; word-break: break-all; margin-bottom: 14px; color: #0f172a;
-  }
-  .row { display: flex; gap: 8px; }
-  button {
-    flex: 1; padding: 11px 16px; border-radius: 9px; border: none; cursor: pointer;
-    font-size: 13.5px; font-weight: 600; background: #4f46e5; color: #fff;
-    transition: background .15s ease;
-  }
-  button:hover { background: #4338ca; }
-  button.copied { background: #059669; }
-  .note { font-size: 12px; color: #94a3b8; margin-top: 16px; line-height: 1.5; }
-  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
-    padding: 3px 10px; border-radius: 999px; margin-bottom: 14px; }
-  .status.ok { background: #ecfdf5; color: #059669; }
-  .status.err { background: #fef2f2; color: #dc2626; }
-  .params { font-size: 12px; color: #64748b; }
-  .params div { padding: 3px 0; }
-  .params b { color: #0f172a; }
-</style>
+<link rel="stylesheet" href="tailwind.css" />
 </head>
-<body>
-  <div class="card" id="card">Loading…</div>
+<body class="m-0 min-h-screen flex items-center justify-center font-sans bg-slate-50 text-slate-900 p-5">
+  <div class="max-w-[480px] w-full bg-white border border-slate-200 rounded-2xl p-7 shadow" id="card">Loading…</div>
 
 <script>
   const params = new URLSearchParams(window.location.search);
@@ -53,14 +18,14 @@
 
   if (token) {
     card.innerHTML = `
-      <span class="status ok">✓ Login successful</span>
-      <h1>Your token</h1>
-      <p class="sub">Copy this and paste it where needed — it's single-use and expires within a few minutes.</p>
-      <div class="token-box" id="tokenText">${token}</div>
-      <div class="row">
-        <button id="copyBtn">Copy to clipboard</button>
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full mb-3.5 bg-emerald-50 text-emerald-600">✓ Login successful</span>
+      <h1 class="text-lg font-semibold mt-0 mb-1.5">Your token</h1>
+      <p class="text-slate-500 text-[13px] mt-0 mb-5">Copy this and paste it where needed — it's single-use and expires within a few minutes.</p>
+      <div class="bg-slate-100 border border-slate-200 rounded-[10px] px-4 py-3.5 font-mono text-sm break-all mb-3.5 text-slate-900" id="tokenText">${token}</div>
+      <div class="flex gap-2">
+        <button id="copyBtn" class="flex-1 py-2.5 px-4 rounded-lg border-none cursor-pointer text-[13.5px] font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Copy to clipboard</button>
       </div>
-      <div class="note">
+      <div class="text-xs text-slate-400 mt-4 leading-relaxed">
         This page never sends your token anywhere — everything happens in your browser.
         Safe to close this tab once you've copied it.
       </div>
@@ -69,8 +34,13 @@
       try {
         await navigator.clipboard.writeText(token);
         e.target.textContent = "Copied!";
-        e.target.classList.add("copied");
-        setTimeout(() => { e.target.textContent = "Copy to clipboard"; e.target.classList.remove("copied"); }, 1800);
+        e.target.classList.remove("bg-indigo-600", "hover:bg-indigo-700");
+        e.target.classList.add("bg-emerald-600");
+        setTimeout(() => {
+          e.target.textContent = "Copy to clipboard";
+          e.target.classList.remove("bg-emerald-600");
+          e.target.classList.add("bg-indigo-600", "hover:bg-indigo-700");
+        }, 1800);
       } catch {
         // Clipboard API unavailable (e.g. non-HTTPS) — select the text as a fallback.
         const range = document.createRange();
@@ -81,13 +51,13 @@
       }
     });
   } else {
-    const rows = [...params.entries()].map(([k, v]) => `<div><b>${k}</b>: ${v}</div>`).join("") || "<div>No query parameters received.</div>";
+    const rows = [...params.entries()].map(([k, v]) => `<div class="py-0.5"><b class="text-slate-900">${k}</b>: ${v}</div>`).join("") || "<div class=\"py-0.5\">No query parameters received.</div>";
     card.innerHTML = `
-      <span class="status err">✕ No request_token found</span>
-      <h1>Something went wrong</h1>
-      <p class="sub">Zerodha redirected here, but no request_token was present${status ? ` (status: ${status})` : ""}. Raw parameters received:</p>
-      <div class="params">${rows}</div>
-      <div class="note">Try the login flow again from kite_login_url.</div>
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full mb-3.5 bg-red-50 text-red-600">✕ No request_token found</span>
+      <h1 class="text-lg font-semibold mt-0 mb-1.5">Something went wrong</h1>
+      <p class="text-slate-500 text-[13px] mt-0 mb-5">Got redirected here, but no request_token was present${status ? ` (status: ${status})` : ""}. Raw parameters received:</p>
+      <div class="text-xs text-slate-500">${rows}</div>
+      <div class="text-xs text-slate-400 mt-4 leading-relaxed">Try the login flow again from kite_login_url.</div>
     `;
   }
 </script>
