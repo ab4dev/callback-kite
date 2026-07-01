@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kite Connect Login Callback</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #f8fafc; color: #0f172a; padding: 20px;
+  }
+  .card {
+    max-width: 480px; width: 100%; background: #fff; border: 1px solid #e2e8f0;
+    border-radius: 16px; padding: 28px; box-shadow: 0 4px 6px -1px rgb(15 23 42 / 0.06);
+  }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  p.sub { color: #64748b; font-size: 13px; margin: 0 0 20px; }
+  .token-box {
+    background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 14px 16px; font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    font-size: 14px; word-break: break-all; margin-bottom: 14px; color: #0f172a;
+  }
+  .row { display: flex; gap: 8px; }
+  button {
+    flex: 1; padding: 11px 16px; border-radius: 9px; border: none; cursor: pointer;
+    font-size: 13.5px; font-weight: 600; background: #4f46e5; color: #fff;
+    transition: background .15s ease;
+  }
+  button:hover { background: #4338ca; }
+  button.copied { background: #059669; }
+  .note { font-size: 12px; color: #94a3b8; margin-top: 16px; line-height: 1.5; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+    padding: 3px 10px; border-radius: 999px; margin-bottom: 14px; }
+  .status.ok { background: #ecfdf5; color: #059669; }
+  .status.err { background: #fef2f2; color: #dc2626; }
+  .params { font-size: 12px; color: #64748b; }
+  .params div { padding: 3px 0; }
+  .params b { color: #0f172a; }
+</style>
+</head>
+<body>
+  <div class="card" id="card">Loading…</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("request_token");
+  const status = params.get("status");
+  const action = params.get("action");
+  const card = document.getElementById("card");
+
+  if (token) {
+    card.innerHTML = `
+      <span class="status ok">✓ Login successful</span>
+      <h1>Your token</h1>
+      <p class="sub">Copy this and paste it where needed — it's single-use and expires within a few minutes.</p>
+      <div class="token-box" id="tokenText">${token}</div>
+      <div class="row">
+        <button id="copyBtn">Copy to clipboard</button>
+      </div>
+      <div class="note">
+        This page never sends your token anywhere — everything happens in your browser.
+        Safe to close this tab once you've copied it.
+      </div>
+    `;
+    document.getElementById("copyBtn").addEventListener("click", async (e) => {
+      try {
+        await navigator.clipboard.writeText(token);
+        e.target.textContent = "Copied!";
+        e.target.classList.add("copied");
+        setTimeout(() => { e.target.textContent = "Copy to clipboard"; e.target.classList.remove("copied"); }, 1800);
+      } catch {
+        // Clipboard API unavailable (e.g. non-HTTPS) — select the text as a fallback.
+        const range = document.createRange();
+        range.selectNodeContents(document.getElementById("tokenText"));
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
+  } else {
+    const rows = [...params.entries()].map(([k, v]) => `<div><b>${k}</b>: ${v}</div>`).join("") || "<div>No query parameters received.</div>";
+    card.innerHTML = `
+      <span class="status err">✕ No request_token found</span>
+      <h1>Something went wrong</h1>
+      <p class="sub">Zerodha redirected here, but no request_token was present${status ? ` (status: ${status})` : ""}. Raw parameters received:</p>
+      <div class="params">${rows}</div>
+      <div class="note">Try the login flow again from kite_login_url.</div>
+    `;
+  }
+</script>
+</body>
+</html>
