@@ -1,27 +1,44 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Kite Connect Login Callback</title>
-<link rel="stylesheet" href="tailwind.css" />
-</head>
-<body class="m-0 min-h-screen flex items-center justify-center font-sans bg-slate-50 text-slate-900 p-5">
-  <div class="max-w-[480px] w-full bg-white border border-slate-200 rounded-2xl p-7 shadow" id="card">Loading…</div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none';" />
+    <title>Login Callback</title>
+    <link rel="stylesheet" href="tailwind.css" />
+  </head>
+  <body class="m-0 min-h-screen flex items-center justify-center font-sans bg-slate-50 text-slate-900 p-5">
+    <div class="max-w-[480px] w-full bg-white border border-slate-200 rounded-2xl p-7 shadow" id="card" role="status" aria-live="polite">Loading…</div>
 
-<script>
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get("request_token");
-  const status = params.get("status");
-  const action = params.get("action");
-  const card = document.getElementById("card");
+    <script>
+      // Different providers name their redirect token differently — first match wins.
+      const TOKEN_PARAMS = ["access_token", "auth_code", "auth_token", "code", "request_token", "session_token", "token"];
 
-  if (token) {
-    card.innerHTML = `
+      const params = new URLSearchParams(window.location.search);
+      const matchedParam = TOKEN_PARAMS.find((name) => params.has(name));
+      const token = matchedParam ? params.get(matchedParam) : null;
+      const statusParam = params.get("status");
+      const card = document.getElementById("card");
+
+      const escapeHtml = (str) =>
+        String(str).replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+
+      if (token) {
+        card.innerHTML = `
       <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full mb-3.5 bg-emerald-50 text-emerald-600">✓ Login successful</span>
       <h1 class="text-lg font-semibold mt-0 mb-1.5">Your token</h1>
       <p class="text-slate-500 text-[13px] mt-0 mb-5">Copy this and paste it where needed — it's single-use and expires within a few minutes.</p>
-      <div class="bg-slate-100 border border-slate-200 rounded-[10px] px-4 py-3.5 font-mono text-sm break-all mb-3.5 text-slate-900" id="tokenText">${token}</div>
+      <div class="bg-slate-100 border border-slate-200 rounded-[10px] px-4 py-3.5 font-mono text-sm break-all mb-3.5 text-slate-900" id="tokenText">${escapeHtml(token)}</div>
       <div class="flex gap-2">
         <button id="copyBtn" class="flex-1 py-2.5 px-4 rounded-lg border-none cursor-pointer text-[13.5px] font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Copy to clipboard</button>
       </div>
@@ -30,36 +47,43 @@
         Safe to close this tab once you've copied it.
       </div>
     `;
-    document.getElementById("copyBtn").addEventListener("click", async (e) => {
-      try {
-        await navigator.clipboard.writeText(token);
-        e.target.textContent = "Copied!";
-        e.target.classList.remove("bg-indigo-600", "hover:bg-indigo-700");
-        e.target.classList.add("bg-emerald-600");
-        setTimeout(() => {
-          e.target.textContent = "Copy to clipboard";
-          e.target.classList.remove("bg-emerald-600");
-          e.target.classList.add("bg-indigo-600", "hover:bg-indigo-700");
-        }, 1800);
-      } catch {
-        // Clipboard API unavailable (e.g. non-HTTPS) — select the text as a fallback.
-        const range = document.createRange();
-        range.selectNodeContents(document.getElementById("tokenText"));
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
-    });
-  } else {
-    const rows = [...params.entries()].map(([k, v]) => `<div class="py-0.5"><b class="text-slate-900">${k}</b>: ${v}</div>`).join("") || "<div class=\"py-0.5\">No query parameters received.</div>";
-    card.innerHTML = `
-      <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full mb-3.5 bg-red-50 text-red-600">✕ No request_token found</span>
+        document.getElementById("copyBtn").addEventListener("click", async (e) => {
+          try {
+            await navigator.clipboard.writeText(token);
+            e.target.textContent = "Copied!";
+            e.target.classList.remove("bg-indigo-600", "hover:bg-indigo-700");
+            e.target.classList.add("bg-emerald-600");
+            setTimeout(() => {
+              e.target.textContent = "Copy to clipboard";
+              e.target.classList.remove("bg-emerald-600");
+              e.target.classList.add("bg-indigo-600", "hover:bg-indigo-700");
+            }, 1800);
+          } catch {
+            // Clipboard API unavailable (e.g. non-HTTPS) — select the text as a fallback.
+            const range = document.createRange();
+            range.selectNodeContents(document.getElementById("tokenText"));
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        });
+      } else {
+        const error = params.get("error");
+        const errorDescription = params.get("error_description");
+        const reason = error
+          ? `the provider returned an error: ${escapeHtml(errorDescription || error)}`
+          : `none of the expected token parameters (${escapeHtml(TOKEN_PARAMS.join(", "))}) were present${statusParam ? ` (status: ${escapeHtml(statusParam)})` : ""}`;
+        const rows =
+          [...params.entries()].map(([k, v]) => `<div class="py-0.5"><b class="text-slate-900">${escapeHtml(k)}</b>: ${escapeHtml(v)}</div>`).join("") ||
+          '<div class="py-0.5">No query parameters received.</div>';
+        card.innerHTML = `
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full mb-3.5 bg-red-50 text-red-600">✕ No token found</span>
       <h1 class="text-lg font-semibold mt-0 mb-1.5">Something went wrong</h1>
-      <p class="text-slate-500 text-[13px] mt-0 mb-5">Got redirected here, but no request_token was present${status ? ` (status: ${status})` : ""}. Raw parameters received:</p>
+      <p class="text-slate-500 text-[13px] mt-0 mb-5">Got redirected here, but ${reason}. Raw parameters received:</p>
       <div class="text-xs text-slate-500">${rows}</div>
-      <div class="text-xs text-slate-400 mt-4 leading-relaxed">Try the login flow again from kite_login_url.</div>
+      <div class="text-xs text-slate-400 mt-4 leading-relaxed">Try the login flow again from your provider's login URL.</div>
     `;
-  }
-</script>
-</body>
+      }
+    </script>
+  </body>
 </html>
